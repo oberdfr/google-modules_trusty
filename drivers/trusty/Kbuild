@@ -4,9 +4,7 @@
 #
 
 # Needed for the trace points
-CFLAGS_trusty.o = -I$(srctree)/$(src)
-CFLAGS_trusty-irq.o = -I$(srctree)/$(src)
-CFLAGS_trusty-ipc.o = -I$(srctree)/$(src)
+ccflags-y += -I$(srctree)/$(src)/
 
 obj-$(CONFIG_TRUSTY)		+= trusty-core.o
 trusty-core-objs		+= trusty.o trusty-mem.o trusty-sched-share.o

@@ -12,6 +12,7 @@
 #include <linux/scatterlist.h>
 #include <linux/trusty/trusty.h>
 #include "trusty-sched-share.h"
+#include "trusty-sched-share-api.h"
 
 /**
  * struct trusty_sched_share_state - Trusty share resources state local to Trusty-Driver
