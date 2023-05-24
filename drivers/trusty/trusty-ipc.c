@@ -185,6 +185,22 @@ static struct virtio_device *default_vdev;
 static DEFINE_IDR(tipc_devices);
 static DEFINE_MUTEX(tipc_devices_lock);
 
+static u64 (*dma_buf_get_ffa_tag)(struct dma_buf *dma_buf) = NULL;
+static int (*dma_buf_get_shared_mem_id)(struct dma_buf *dma_buf,
+	trusty_shared_mem_id_t *id) = NULL;
+
+static inline u64 trusty_dma_buf_get_ffa_tag(struct dma_buf *dma_buf)
+{
+	return dma_buf_get_ffa_tag ? dma_buf_get_ffa_tag(dma_buf) : 0;
+}
+
+static int trusty_dma_buf_get_shared_mem_id(struct dma_buf *dma_buf,
+					    trusty_shared_mem_id_t *id)
+{
+	return  dma_buf_get_shared_mem_id ?
+		dma_buf_get_shared_mem_id(dma_buf, id) : -ENODATA;
+}
+
 static int _match_any(int id, void *p, void *data)
 {
 	return id;
@@ -2281,6 +2297,16 @@ static void __exit tipc_exit(void)
 	class_destroy(tipc_class);
 	unregister_chrdev_region(MKDEV(tipc_major, 0), MAX_DEVICES);
 }
+
+void trusty_register_func_for_dma_buf(
+	u64 (*get_ffa_tag)(struct dma_buf *dma_buf),
+	int (*get_shared_mem_id)(struct dma_buf *dma_buf,
+		trusty_shared_mem_id_t *id))
+{
+	dma_buf_get_ffa_tag = get_ffa_tag;
+	dma_buf_get_shared_mem_id = get_shared_mem_id;
+}
+EXPORT_SYMBOL_GPL(trusty_register_func_for_dma_buf);
 
 /* We need to init this early */
 subsys_initcall(tipc_init);
