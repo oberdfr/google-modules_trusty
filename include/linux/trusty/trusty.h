@@ -83,41 +83,10 @@ int trusty_reclaim_memory(struct device *dev, trusty_shared_mem_id_t id,
 			  struct scatterlist *sglist, unsigned int nents);
 
 struct dma_buf;
-#ifdef CONFIG_TRUSTY_DMA_BUF_FFA_TAG
-u64 trusty_dma_buf_get_ffa_tag(struct dma_buf *dma_buf);
-#else
-static inline u64 trusty_dma_buf_get_ffa_tag(struct dma_buf *dma_buf)
-{
-	return 0;
-}
-#endif
-
-/* Invalid handle value is defined by FF-A spec */
-#ifdef CONFIG_TRUSTY_DMA_BUF_SHARED_MEM_ID
-/**
- * trusty_dma_buf_get_shared_mem_id() - Get memory ID corresponding to a dma_buf
- * @dma_buf: DMA buffer
- * @id:      Pointer to output trusty_shared_mem_id_t
- *
- * Sets @id to trusty_shared_mem_id_t corresponding to the given @dma_buf.
- * @dma_buf "owns" the ID, i.e. is responsible for allocating/releasing it.
- * @dma_buf with an allocated @id must be in secure memory and should only be
- * sent to Trusty using TRUSTY_SEND_SECURE.
- *
- * Return:
- * * 0        - success
- * * -ENODATA - @dma_buf does not own a trusty_shared_mem_id_t
- * * ...      - @dma_buf should not be lent or shared
- */
-int trusty_dma_buf_get_shared_mem_id(struct dma_buf *dma_buf,
-				     trusty_shared_mem_id_t *id);
-#else
-static inline int trusty_dma_buf_get_shared_mem_id(struct dma_buf *dma_buf,
-						   trusty_shared_mem_id_t *id)
-{
-	return -ENODATA;
-}
-#endif
+void trusty_register_func_for_dma_buf(
+	u64 (*get_ffa_tag)(struct dma_buf *dma_buf),
+	int (*get_shared_mem_id)(struct dma_buf *dma_buf,
+		trusty_shared_mem_id_t *id));
 
 struct trusty_nop {
 	struct list_head node;

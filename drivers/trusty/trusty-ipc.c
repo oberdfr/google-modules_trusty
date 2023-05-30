@@ -185,6 +185,22 @@ static struct virtio_device *default_vdev;
 static DEFINE_IDR(tipc_devices);
 static DEFINE_MUTEX(tipc_devices_lock);
 
+static u64 (*dma_buf_get_ffa_tag)(struct dma_buf *dma_buf) = NULL;
+static int (*dma_buf_get_shared_mem_id)(struct dma_buf *dma_buf,
+	trusty_shared_mem_id_t *id) = NULL;
+
+static inline u64 trusty_dma_buf_get_ffa_tag(struct dma_buf *dma_buf)
+{
+	return dma_buf_get_ffa_tag ? dma_buf_get_ffa_tag(dma_buf) : 0;
+}
+
+static int trusty_dma_buf_get_shared_mem_id(struct dma_buf *dma_buf,
+					    trusty_shared_mem_id_t *id)
+{
+	return  dma_buf_get_shared_mem_id ?
+		dma_buf_get_shared_mem_id(dma_buf, id) : -ENODATA;
+}
+
 static int _match_any(int id, void *p, void *data)
 {
 	return id;
@@ -1360,7 +1376,7 @@ static long filp_send_ioctl(struct file *filp,
 		goto load_shm_args_failed;
 	}
 
-	ret = import_iovec(READ, u64_to_user_ptr(req.iov), req.iov_cnt,
+	ret = import_iovec(WRITE, u64_to_user_ptr(req.iov), req.iov_cnt,
 			   ARRAY_SIZE(fast_iovs), &iov, &iter);
 	if (ret < 0) {
 		dev_dbg(dev, "Failed to import iovec\n");
@@ -1505,6 +1521,8 @@ static ssize_t tipc_read_iter(struct kiocb *iocb, struct iov_iter *iter)
 {
 	ssize_t ret;
 	size_t len;
+	trusty_shared_mem_id_t buf_id = ~0ULL;
+	size_t shm_cnt = 0;
 	struct tipc_msg_buf *mb = NULL;
 	struct file *filp = iocb->ki_filp;
 	struct tipc_dn_chan *dn = filp->private_data;
@@ -1539,6 +1557,8 @@ static ssize_t tipc_read_iter(struct kiocb *iocb, struct iov_iter *iter)
 
 	mb = list_first_entry(&dn->rx_msg_queue, struct tipc_msg_buf, node);
 
+	buf_id = mb->buf_id;
+	shm_cnt = mb->shm_cnt;
 	len = mb_avail_data(mb);
 	if (len > iov_iter_count(iter)) {
 		ret = -EMSGSIZE;
@@ -1555,7 +1575,7 @@ static ssize_t tipc_read_iter(struct kiocb *iocb, struct iov_iter *iter)
 	tipc_chan_put_rxbuf(dn->chan, mb);
 
 out:
-	trace_trusty_ipc_read_end(dn->chan, ret, mb);
+	trace_trusty_ipc_read_end(dn->chan, ret, buf_id, shm_cnt);
 	mutex_unlock(&dn->lock);
 	return ret;
 }
@@ -2281,6 +2301,16 @@ static void __exit tipc_exit(void)
 	class_destroy(tipc_class);
 	unregister_chrdev_region(MKDEV(tipc_major, 0), MAX_DEVICES);
 }
+
+void trusty_register_func_for_dma_buf(
+	u64 (*get_ffa_tag)(struct dma_buf *dma_buf),
+	int (*get_shared_mem_id)(struct dma_buf *dma_buf,
+		trusty_shared_mem_id_t *id))
+{
+	dma_buf_get_ffa_tag = get_ffa_tag;
+	dma_buf_get_shared_mem_id = get_shared_mem_id;
+}
+EXPORT_SYMBOL_GPL(trusty_register_func_for_dma_buf);
 
 /* We need to init this early */
 subsys_initcall(tipc_init);
