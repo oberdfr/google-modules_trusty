@@ -373,12 +373,17 @@ int trusty_transfer_memory(struct device *dev, u64 *id,
 			u32 smc = lend ? SMC_FC_FFA_MEM_LEND :
 					 SMC_FC_FFA_MEM_SHARE;
 			/* First fragment */
+			trace_trusty_smc(smc, total_len, fragment_len, 0);
 			smc_ret = trusty_smc8(smc, total_len,
 					      fragment_len, 0, 0, 0, 0, 0);
+			trace_trusty_smc_done(smc_ret.r0);
 		} else {
+			trace_trusty_smc(SMC_FC_FFA_MEM_FRAG_TX, cookie_low,
+					cookie_high, fragment_len);
 			smc_ret = trusty_smc8(SMC_FC_FFA_MEM_FRAG_TX,
 					      cookie_low, cookie_high,
 					      fragment_len, 0, 0, 0, 0);
+			trace_trusty_smc_done(smc_ret.r0);
 		}
 		if (smc_ret.r0 == SMC_FC_FFA_MEM_FRAG_RX) {
 			cookie_low = smc_ret.r1;
