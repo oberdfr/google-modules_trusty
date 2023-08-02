@@ -373,12 +373,17 @@ int trusty_transfer_memory(struct device *dev, u64 *id,
 			u32 smc = lend ? SMC_FC_FFA_MEM_LEND :
 					 SMC_FC_FFA_MEM_SHARE;
 			/* First fragment */
+			trace_trusty_smc(smc, total_len, fragment_len, 0);
 			smc_ret = trusty_smc8(smc, total_len,
 					      fragment_len, 0, 0, 0, 0, 0);
+			trace_trusty_smc_done(smc_ret.r0);
 		} else {
+			trace_trusty_smc(SMC_FC_FFA_MEM_FRAG_TX, cookie_low,
+					cookie_high, fragment_len);
 			smc_ret = trusty_smc8(SMC_FC_FFA_MEM_FRAG_TX,
 					      cookie_low, cookie_high,
 					      fragment_len, 0, 0, 0, 0);
+			trace_trusty_smc_done(smc_ret.r0);
 		}
 		if (smc_ret.r0 == SMC_FC_FFA_MEM_FRAG_RX) {
 			cookie_low = smc_ret.r1;
@@ -1006,6 +1011,7 @@ static int trusty_cpu_up(unsigned int cpu, struct hlist_node *node)
 
 	s = container_of(node, struct trusty_state, cpuhp_node);
 	tw = this_cpu_ptr(s->nop_works);
+	set_cpus_allowed_ptr(tw->nop_thread, cpumask_of(cpu));
 	kthread_unpark(tw->nop_thread);
 
 	dev_dbg(s->dev, "cpu %d up\n", cpu);
@@ -1101,7 +1107,6 @@ static int trusty_probe(struct platform_device *pdev)
 					__func__, cpu, tw->nop_thread);
 			goto err_thread_create;
 		}
-		kthread_set_per_cpu(tw->nop_thread, cpu);
 		kthread_park(tw->nop_thread);
 	}
 
