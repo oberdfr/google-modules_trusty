@@ -1019,7 +1019,6 @@ static int trusty_cpu_up(unsigned int cpu, struct hlist_node *node)
 
 	s = container_of(node, struct trusty_state, cpuhp_node);
 	tw = this_cpu_ptr(s->nop_works);
-	set_cpus_allowed_ptr(tw->nop_thread, cpumask_of(cpu));
 	kthread_unpark(tw->nop_thread);
 
 	dev_dbg(s->dev, "cpu %d up\n", cpu);
@@ -1115,6 +1114,7 @@ static int trusty_probe(struct platform_device *pdev)
 					__func__, cpu, tw->nop_thread);
 			goto err_thread_create;
 		}
+		kthread_set_per_cpu(tw->nop_thread, cpu);
 		kthread_park(tw->nop_thread);
 	}
 
