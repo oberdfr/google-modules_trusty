@@ -10,6 +10,7 @@ filegroup(
     visibility = [
         "//private/devices/google:__subpackages__",
         "//private/google-modules/aoc:__pkg__",
+        "//private/google-modules/aoc_whi:__pkg__",
         "//private/google-modules/hdcp/samsung:__pkg__",
         "//private/google-modules/soc/gs:__pkg__",
     ],
